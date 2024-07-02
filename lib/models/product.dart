@@ -1,5 +1,3 @@
-import 'dart:io';
-
 class Product {
   int? productNo;
   String? productName;
