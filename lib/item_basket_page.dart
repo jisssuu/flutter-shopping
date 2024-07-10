@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // 불러온 이미지를 cache에 저장해서 다시 불로오기 편함
+import 'package:flutter_shoppingapp/item_checkout_page.dart';
 import 'package:intl/intl.dart'; // 상품의 가격이 100000원이라면, 100,000원으로 보기 좋게 만드는데 용이
 import 'package:flutter_shoppingapp/models/product.dart';
 import './constants.dart';
@@ -61,7 +62,12 @@ class _ItemBasketPageState extends State<ItemBasketPage> {
       ),
       bottomNavigationBar: Padding(padding: const EdgeInsets.all(20),
       child: FilledButton(
-        onPressed: () {},
+        onPressed: () {
+          // 결제시작 페이지로 이동.
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+            return ItemCheckoutPage();
+          }));
+        },
         child: Text("총 ${numberFormat.format(totalPrice)}원 결제하기"),
       ),),
     );
