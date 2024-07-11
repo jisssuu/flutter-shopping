@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // 불러온 이미지를 cache에 저장해서 다시 불로오기 편함
 import 'package:flutter_shoppingapp/item_basket_page.dart';
@@ -10,7 +12,6 @@ class ItemDetailsPage extends StatefulWidget {
   String productName;
   String productImageUrl;
   double price;
-
   ItemDetailsPage(
       {super.key,
       required this.productNo,
@@ -26,6 +27,11 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
   int quantity = 1;
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -39,7 +45,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
             productNameContainer(),
             productPriceContainer(),
             productQuantityContainer(),
-            productTotalPriceContainer()
+            productTotalPriceContainer(),
           ],
         ),
       ),
@@ -47,35 +53,29 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
         padding: const EdgeInsets.all(20),
         child: FilledButton(
           onPressed: () {
+            //! 임시 장바구니 변수 Map 선언 - 디스크에서 받아옴
+            Map<String, dynamic> cartMap =
+                json.decode(sharedPreferences.getString("cartMap") ?? "{}") ??
+                    {};
+
+            //! 장바구니에 해당 제품이 없으면
+            if (cartMap[widget.productNo.toString()] == null) {
+              cartMap.addAll({widget.productNo.toString(): quantity});
+            } else {
+              //! 제품이 있으면
+              cartMap[widget.productNo.toString()] += quantity;
+            }
+            //! 디스크에 다시 반영
+            sharedPreferences.setString("cartMap", json.encode(cartMap));
+
+            print(cartMap);
+
+            //! 장바구니 페이지로 이동
             Navigator.of(context).push(MaterialPageRoute(builder: (context) {
               return const ItemBasketPage();
             }));
           },
           child: const Text("장바구니 담기"),
-        ),
-      ),
-    );
-  }
-
-  Container productPriceContainer() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Text(
-        "${numberFormat.format(widget.price)}원",
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Container productNameContainer() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Text(
-        widget.productName,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
         ),
       ),
     );
@@ -87,6 +87,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
       padding: const EdgeInsets.all(15),
       child: CachedNetworkImage(
         width: MediaQuery.of(context).size.width * 0.8,
+        fit: BoxFit.cover,
         imageUrl: widget.productImageUrl,
         placeholder: (context, url) {
           return const Center(
@@ -104,6 +105,29 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
     );
   }
 
+  Widget productNameContainer() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Text(
+        widget.productName,
+        textScaleFactor: 1.5,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget productPriceContainer() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Text(
+        "${numberFormat.format(widget.price)}원",
+        textScaleFactor: 1.3,
+      ),
+    );
+  }
+
   Widget productQuantityContainer() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -112,40 +136,49 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
         children: [
           const Text("수량: "),
           IconButton(
-              onPressed: () {
-                setState(() {
-                  if (quantity > 1) {
-                    quantity--;
-                  }
-                });
-              },
-              icon: const Icon(
-                Icons.remove,
-                size: 24,
-              )),
+            onPressed: () {
+              setState(() {
+                if (quantity > 1) {
+                  quantity--;
+                }
+              });
+            },
+            icon: const Icon(Icons.remove, size: 24),
+          ),
           Text("$quantity"),
           IconButton(
-              onPressed: () {
-                setState(() {
-                  quantity++;
-                });
-              },
-              icon: const Icon(
-                Icons.add,
-                size: 24,
-              )),
+            onPressed: () {
+              setState(() {
+                quantity++;
+              });
+            },
+            icon: const Icon(Icons.add, size: 24),
+          ),
         ],
       ),
     );
   }
+
   Widget productTotalPriceContainer() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text("총 상품금액: ", style: TextStyle(fontWeight: FontWeight.bold),),
-          Text("${numberFormat.format(widget.price * quantity)}원", style: TextStyle(fontWeight: FontWeight.bold),)
+          const Text(
+            "총 상품금액: ",
+            textScaleFactor: 1.3,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            "${numberFormat.format(widget.price * quantity)}원",
+            textScaleFactor: 1.3,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
