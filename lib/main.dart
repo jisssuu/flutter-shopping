@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_shoppingapp/constants.dart';
 import 'package:flutter_shoppingapp/item_list_page.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  initializeSharedPreferences();
   runApp(const MyApp());
 }
 class MyApp extends StatelessWidget {
