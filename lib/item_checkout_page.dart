@@ -1,10 +1,14 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // 불러온 이미지를 cache에 저장해서 다시 불로오기 편함
 import 'package:flutter/widgets.dart';
+import 'package:flutter_shoppingapp/enums/delivery_status.dart';
+import 'package:flutter_shoppingapp/enums/payment_status.dart';
 import 'package:flutter_shoppingapp/item_order_result_page.dart';
+import 'package:flutter_shoppingapp/models/order.dart';
 import 'package:intl/intl.dart'; // 상품의 가격이 100000원이라면, 100,000원으로 보기 좋게 만드는데 용이
 import 'package:flutter_shoppingapp/models/product.dart';
 import './constants.dart';
@@ -239,6 +243,82 @@ class _ItemCheckoutPageState extends State<ItemCheckoutPage> {
                               return;
                             }
 
+                            List<int> bytes =
+                                utf8.encode(userPwdController.text);
+                            Digest hashPwd = sha256.convert(bytes);
+                            String orderNo =
+                                "${DateFormat("yMdhms").format(DateTime.now())}-${DateTime.now().millisecond}";
+
+                            //! 이 부분에 파이어스토어에 접근해서 데이터 insert 작업 진행함.
+                            snapshot.data?.docs.forEach(
+                              (document) {
+                                ProductOrder productOrder = ProductOrder(
+                                  orderNo: orderNo,
+                                  productNo: document.data().productNo,
+                                  orderDate: DateFormat("y-M-d h:m:s")
+                                      .format(DateTime.now()),
+                                  buyerName: buyerNameController.text,
+                                  buyerEmail: buyerEmailController.text,
+                                  buyerPhone: buyerPhoneController.text,
+                                  receiverName: receiverNameController.text,
+                                  receiverPhone: receiverPhoneController.text,
+                                  receiverZip: receiverZipController.text,
+                                  receiverAddress1:
+                                      receiverAddress1Controller.text,
+                                  receiverAddress2:
+                                      receiverAddress2Controller.text,
+                                  userPwd: hashPwd.toString(),
+                                  paymentMethod: selectedPaymentMethod,
+                                  quantity: cartMap[
+                                      document.data().productNo.toString()],
+                                  unitPrice: document.data().price,
+                                  totalPrice: cartMap[document
+                                          .data()
+                                          .productNo
+                                          .toString()] *
+                                      document.data().price,
+                                  paymentStatus:
+                                      PaymentStatus.waiting.statusName,
+                                  deliveryStatus:
+                                      DeliveryStatus.waiting.statusName,
+                                );
+                                print(jsonEncode(productOrder));
+                                try {
+                                  database
+                                      .collection("orders")
+                                      .add(productOrder.toJson());
+                                } catch (e) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        content: Padding(
+                                          padding: const EdgeInsets.all(15.0),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Center(
+                                                  child: Text("오류가 발생 했습니다.")),
+                                            ],
+                                          ),
+                                        ),
+                                        actions: [
+                                          Center(
+                                            child: FilledButton(
+                                                onPressed: () =>
+                                                    Navigator.pop(context),
+                                                child: Text("확인")),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                  //! 아래 부분이 더 이상 호출되지 않도록 return합니다.
+                                  return;
+                                }
+                              },
+                            );
+
                             Navigator.of(context).push(MaterialPageRoute(
                               builder: (context) {
                                 return ItemOrderResultPage(
@@ -287,6 +367,7 @@ class _ItemCheckoutPageState extends State<ItemCheckoutPage> {
         children: [
           CachedNetworkImage(
             width: MediaQuery.of(context).size.width * 0.3,
+            height: 130,
             fit: BoxFit.cover,
             imageUrl: productImageUrl,
             placeholder: (context, url) {
